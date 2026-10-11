@@ -251,12 +251,20 @@ def force_sub_kb(channels: list[dict]) -> InlineKeyboardMarkup:
     for ch in channels:
         url = ch.get("channel_url", "")
         username = ch.get("channel_username", "Kanal")
-        kb.row(InlineKeyboardButton(
-            text=f"📢 {username}",
-            url=url,
-        ))
+        if url:
+            kb.row(InlineKeyboardButton(
+                text=f"📢 {username}",
+                url=url,
+            ))
+
+    # Kanal egasi botni tanlab, kanalga administrator qilib qo'shishi mumkin.
+    # Telegram ochadigan tanlash oynasida kerakli kanalni tanlash lozim.
     kb.row(InlineKeyboardButton(
-        text="✅ Obuna bo'ldim",
+        text="➕ Botni kanalga admin qilish",
+        url="https://t.me/AniDevwBot?startchannel&admin=post_messages+edit_messages+invite_users",
+    ))
+    kb.row(InlineKeyboardButton(
+        text="✅ Obuna bo'ldim — tekshirish",
         callback_data="check_sub",
     ))
     return kb.as_markup()
