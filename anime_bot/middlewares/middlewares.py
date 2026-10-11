@@ -105,7 +105,10 @@ class ForceSubMiddleware(BaseMiddleware):
             # Obuna bo'lmagan kanallar mavjud
             if isinstance(event, Message):
                 await event.answer(
-                    "🔔 Botdan foydalanish uchun quyidagi kanallarga obuna bo'ling!",
+                    "🔔 Botdan foydalanish uchun quyidagi kanallarga obuna bo'ling.\n\n"
+                    "⚙️ Agar obuna bo'lgan bo'lsangiz-u, tekshiruv ishlamasa, kanal egasi "
+                    "«➕ Botni kanalga admin qilish» tugmasi orqali botni kanalga administrator "
+                    "qilib qo'shsin. So'ng «✅ Obuna bo'ldim — tekshirish»ni bosing.",
                     reply_markup=force_sub_kb(not_subscribed),
                 )
                 return
