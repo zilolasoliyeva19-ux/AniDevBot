@@ -351,8 +351,7 @@ async def show_anime_detail(message_or_callback, anime_id: int, callback=None):
 
 @router.callback_query(F.data.startswith("episodes:"))
 async def cb_episodes_list(callback: CallbackQuery):
-    """Anime epizodlari ro'yxati."""
-    await callback.answer()
+    """Anime epizodlari ro'yxatini rasmli va oddiy xabarlarda ko'rsatish."""
     anime_id = int(callback.data.split(":")[1])
     episodes = await repo.get_episodes_by_anime(anime_id)
 
@@ -362,12 +361,32 @@ async def cb_episodes_list(callback: CallbackQuery):
 
     anime = await repo.get_anime_by_id(anime_id)
     title = anime.get("title", "Anime") if anime else "Anime"
+    text = f"📺 <b>{title}</b> — Qismlar ro'yxati ({len(episodes)} ta):"
+    markup = kb.episodes_kb(anime_id, episodes)
 
-    await callback.message.edit_caption(
-        caption=f"📺 <b>{title}</b> — Qismlar ro'yxati ({len(episodes)} ta):",
-        reply_markup=kb.episodes_kb(anime_id, episodes),
-        parse_mode="HTML",
-    )
+    try:
+        # Posterli xabarda caption, postersiz oddiy xabarda text tahrirlanadi.
+        if callback.message.caption is not None:
+            await callback.message.edit_caption(
+                caption=text,
+                reply_markup=markup,
+                parse_mode="HTML",
+            )
+        else:
+            await callback.message.edit_text(
+                text,
+                reply_markup=markup,
+                parse_mode="HTML",
+            )
+        await callback.answer()
+    except Exception:
+        # Xabarni tahrirlash mumkin bo'lmasa ham tugma bosilishi javobsiz qolmasin.
+        await callback.answer()
+        await callback.message.answer(
+            text,
+            reply_markup=markup,
+            parse_mode="HTML",
+        )
 
 
 @router.callback_query(F.data.startswith("ep:"))
