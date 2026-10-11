@@ -496,7 +496,8 @@ async def cb_check_sub(callback: CallbackQuery):
                 chat_id=chat_id,
                 user_id=callback.from_user.id,
             )
-            status = str(member.status)
+            raw_status = member.status
+            status = str(getattr(raw_status, "value", raw_status)).lower()
             is_member = status in ("creator", "administrator", "member")
             if status == "restricted":
                 is_member = bool(getattr(member, "is_member", False))
