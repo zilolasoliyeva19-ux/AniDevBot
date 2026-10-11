@@ -87,7 +87,8 @@ class ForceSubMiddleware(BaseMiddleware):
             chat_id = channel_username if channel_username.startswith("@") else f"@{channel_username}"
             try:
                 member = await bot.get_chat_member(chat_id=chat_id, user_id=user.id)
-                status = str(member.status)
+                raw_status = member.status
+                status = str(getattr(raw_status, "value", raw_status)).lower()
                 is_member = status in ("creator", "administrator", "member")
                 if status == "restricted":
                     is_member = bool(getattr(member, "is_member", False))
