@@ -6,6 +6,7 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
+from aiogram.dispatcher.event.bases import SkipHandler
 
 from anime_bot.config import config
 from anime_bot.database import repo
@@ -49,6 +50,15 @@ async def is_admin(user_id: int) -> bool:
     if user_id in config.admin_ids:
         return True
     return await repo.is_db_admin(user_id)
+
+
+@router.message(F.text == "❌ Bekor qilish")
+async def admin_cancel_early(message: Message, state: FSMContext):
+    """FSM bosqichidagi bekor qilishni boshqa handlerlardan oldin ushlash."""
+    if not await is_admin(message.from_user.id):
+        raise SkipHandler
+    await state.clear()
+    await message.answer("❌ Bekor qilindi.", reply_markup=kb.admin_menu_kb())
 
 
 # ==================== ADMIN MENYUSI ====================
@@ -1325,13 +1335,6 @@ async def admin_back_to_anime_list(callback: CallbackQuery):
     )
 
 
-# ==================== BEKOR QILISH (ADMIN) ====================
-
-@router.message(F.text == "❌ Bekor qilish")
-async def admin_cancel(message: Message, state: FSMContext):
-    """Admin jarayonini bekor qilish."""
-    await state.clear()
-    await message.answer("❌ Bekor qilindi.", reply_markup=kb.admin_menu_kb())
 
 
 @router.callback_query(F.data == "admin_back")
