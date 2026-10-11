@@ -476,43 +476,65 @@ async def cb_noop(callback: CallbackQuery):
 
 @router.callback_query(F.data == "check_sub")
 async def cb_check_sub(callback: CallbackQuery):
-    """Obuna tekshiruvini qayta bajarish."""
-    await callback.answer("Obuna tekshirilmoqda...", show_alert=False)
-
+    """Obunani qayta tekshiradi; callback faqat bir marta javoblanadi."""
     force_subs = await repo.get_force_subs()
-    bot = callback.bot
-    not_subscribed = []
+    if not force_subs:
+        await callback.answer("Majburiy obuna kanallari sozlanmagan.", show_alert=True)
+        return
 
+    not_subscribed = []
     for sub in force_subs:
-        channel_username = sub.get("channel_username", "")
+        channel_username = (sub.get("channel_username") or "").strip()
         if not channel_username:
+            not_subscribed.append(sub)
             continue
-        clean_username = channel_username.lstrip("@")
+
+        # Username @name yoki oddiy name ko'rinishida bo'lishi mumkin.
+        chat_id = channel_username if channel_username.startswith("@") else f"@{channel_username}"
         try:
-            member = await bot.get_chat_member(
-                chat_id=f"@{clean_username}",
+            member = await callback.bot.get_chat_member(
+                chat_id=chat_id,
                 user_id=callback.from_user.id,
             )
-            if member.status == "left":
+            status = str(member.status)
+            is_member = status in ("creator", "administrator", "member")
+            if status == "restricted":
+                is_member = bool(getattr(member, "is_member", False))
+            if not is_member:
                 not_subscribed.append(sub)
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Obuna tekshirilmadi: kanal=%s user_id=%s xato=%s",
+                channel_username, callback.from_user.id, exc,
+            )
             not_subscribed.append(sub)
 
     if not_subscribed:
         await callback.answer(
-            "⚠️ Siz hali barcha kanallarga obuna bo'lmadingiz!",
+            "⚠️ Hali barcha kanallarga obuna bo'lmagansiz. Kanallarga obuna bo'lib, qayta tekshiring.",
             show_alert=True,
         )
-    else:
+        # Faqat obuna bo'lmagan kanallar uchun tugmalarni qayta chiqaramiz.
+        try:
+            await callback.message.edit_reply_markup(
+                reply_markup=kb.force_sub_kb(not_subscribed)
+            )
+        except Exception:
+            pass
+        return
+
+    await callback.answer("✅ Obuna tasdiqlandi!", show_alert=False)
+    try:
         await callback.message.delete()
-        is_admin = callback.from_user.id in config.admin_ids or await repo.is_db_admin(callback.from_user.id)
-        if is_admin:
-            await callback.message.answer(
-                "✅ Obuna tasdiqlandi! Botdan foydalanishingiz mumkin.",
-                reply_markup=kb.admin_menu_kb(),
-            )
-        else:
-            await callback.message.answer(
-                "✅ Obuna tasdiqlandi! Botdan foydalanishingiz mumkin.",
-                reply_markup=kb.main_menu_kb(),
-            )
+    except Exception:
+        pass
+
+    is_admin_user = (
+        callback.from_user.id in config.admin_ids
+        or await repo.is_db_admin(callback.from_user.id)
+    )
+    reply_markup = kb.admin_menu_kb() if is_admin_user else kb.main_menu_kb()
+    await callback.message.answer(
+        "✅ Obuna tasdiqlandi! Botdan foydalanishingiz mumkin.",
+        reply_markup=reply_markup,
+    )
