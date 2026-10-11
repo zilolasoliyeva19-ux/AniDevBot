@@ -51,6 +51,16 @@ async def main():
     me = await bot.get_me()
     logger.info(f"Bot @{me.username} sifatida ishga tushdi!")
 
+    # Har ishga tushganda rasmiy tavsifni tiklash.
+    # BOT_TOKEN oshkor bo'lgan bo'lsa, uni BotFather orqali yangilash shart.
+    try:
+        await bot.set_my_description(
+            "🎬 Anidev Anime — anime katalogi, yangiliklar va qismlarni topish uchun bot."
+        )
+        logger.info("Bot tavsifi standart matnga tiklandi.")
+    except Exception as e:
+        logger.warning(f"Bot tavsifini yangilab bo'lmadi: {e}")
+
     for admin_id in config.admin_ids:
         try:
             await bot.send_message(
