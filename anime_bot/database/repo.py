@@ -4,6 +4,7 @@ Barcha metodlar async va SQLite (aiosqlite) orqali ishlaydi.
 """
 from typing import Optional
 from anime_bot.database.connection import db, init_db
+from anime_bot.config import config
 
 
 # ==================== INIT ====================
@@ -324,7 +325,33 @@ async def get_user_favorites(tg_user_id: int) -> list[dict]:
 # ==================== FORCE SUBS ====================
 
 async def get_force_subs() -> list[dict]:
-    return await db.fetchall("SELECT * FROM force_subs WHERE is_active = 1")
+    """Bazadagi va .env dagi majburiy obuna kanallarini birlashtirish."""
+    channels = await db.fetchall(
+        "SELECT * FROM force_subs WHERE is_active = 1"
+    )
+
+    # .env dagi FORCE_SUB_CHANNELS: @channel1,@channel2
+    known = {
+        (str(item.get("channel_username") or "").strip().lower().lstrip("@"))
+        for item in channels
+    }
+    for configured in config.force_sub_channels:
+        username = str(configured or "").strip()
+        if not username:
+            continue
+        username = username if username.startswith("@") else f"@{username}"
+        key = username.lower().lstrip("@")
+        if key in known:
+            continue
+        channels.append({
+            "id": None,
+            "channel_url": f"https://t.me/{key}",
+            "channel_username": username,
+            "is_active": 1,
+        })
+        known.add(key)
+
+    return channels
 
 
 async def add_force_sub(channel_url: str, channel_username: str = None) -> Optional[dict]:
