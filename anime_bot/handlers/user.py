@@ -15,6 +15,13 @@ from anime_bot.states.states import SearchStates
 logger = logging.getLogger(__name__)
 router = Router(name="user")
 
+@router.message(F.text == "❌ Bekor qilish")
+async def cancel_search_early(message: Message, state: FSMContext):
+    """Bekor qilishni qidiruv FSM handlerlaridan oldin bajarish."""
+    await state.clear()
+    await message.answer("❌ Bekor qilindi.", reply_markup=kb.main_menu_kb())
+
+
 
 # ==================== /START ====================
 
@@ -222,15 +229,6 @@ async def search_by_code_process(message: Message, state: FSMContext):
     await show_anime_detail(message, anime["id"])
 
 
-@router.message(F.text == "❌ Bekor qilish")
-async def cancel_search(message: Message, state: FSMContext):
-    """Qidiruvni bekor qilish."""
-    await state.clear()
-    is_admin = message.from_user.id in config.admin_ids or await repo.is_db_admin(message.from_user.id)
-    if is_admin:
-        await message.answer("❌ Bekor qilindi.", reply_markup=kb.admin_menu_kb())
-    else:
-        await message.answer("❌ Bekor qilindi.", reply_markup=kb.main_menu_kb())
 
 
 # ==================== ANIME TAFSLOTI (INLINE CALLBACKS) ====================
