@@ -76,25 +76,28 @@ class ForceSubMiddleware(BaseMiddleware):
         if not bot:
             return await handler(event, data)
 
-        # Har bir kanalga obuna tekshiruvi
+        # Har bir kanalga obuna tekshiruvi.
         not_subscribed = []
         for sub in force_subs:
-            channel_username = sub.get("channel_username", "")
+            channel_username = (sub.get("channel_username") or "").strip()
             if not channel_username:
+                not_subscribed.append(sub)
                 continue
-            # Kanal username dan @ belgisini olib tashlash
-            clean_username = channel_username.lstrip("@")
 
+            chat_id = channel_username if channel_username.startswith("@") else f"@{channel_username}"
             try:
-                member = await bot.get_chat_member(
-                    chat_id=f"@{clean_username}",
-                    user_id=user.id,
-                )
-                # Obuna statuslari: member, administrator, creator
-                if member.status == "left":
+                member = await bot.get_chat_member(chat_id=chat_id, user_id=user.id)
+                status = str(member.status)
+                is_member = status in ("creator", "administrator", "member")
+                if status == "restricted":
+                    is_member = bool(getattr(member, "is_member", False))
+                if not is_member:
                     not_subscribed.append(sub)
             except Exception as e:
-                logger.warning(f"Obuna tekshiruvda xato: {channel_username} - {e}")
+                logger.warning(
+                    "Obuna tekshiruvda xato: kanal=%s user_id=%s xato=%s",
+                    channel_username, user.id, e,
+                )
                 not_subscribed.append(sub)
 
         if not_subscribed:
